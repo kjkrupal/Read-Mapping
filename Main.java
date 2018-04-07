@@ -2,25 +2,33 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.io.File;
 
 public class Main{
   public static void main(String[] args) {
     try{
 
-      if(args.length != 2)
-        throw new InputArgumentException("Specify proper sequence file path and alphabet file path in order");
+      if(args.length != 3)
+        throw new InputArgumentException("Specify proper reference file path, read file path and alphabet file path in order");
 
-      String sequence_file_name = args[0];
+      String reference_file_name = args[0];
       if(!new File(sequence_file_name).exists())
-        throw new InputArgumentException("Specify proper file name and path for sequence file");
+        throw new InputArgumentException("Specify proper file name and path for reference sequence file");
 
-      String alphabet_file_name = args[1];
+      String read_file_name = args[1];
+      if(!new File(alphabet_file_name).exists())
+        throw new InputArgumentException("Specify proper file name and path for reads file");
+
+      String alphabet_file_name = args[2];
       if(!new File(alphabet_file_name).exists())
         throw new InputArgumentException("Specify proper file name and path for Alphabet file");
 
       @SuppressWarnings("unchecked")
-      ArrayList<ArrayList> list = readSequenceFile(sequence_file_name);
+      ArrayList<ArrayList> list = readReferenceFile(reference_file_name);
+
+      @SuppressWarnings("unchecked")
+      HashMap<String, String> reads = readReadFile(read_file_name);
 
       char[] alphabet = readAlphabetFile(alphabet_file_name);
 
@@ -31,6 +39,20 @@ public class Main{
     catch(Exception exception){
       System.out.println(exception);
     }
+  }
+
+  static HashMap<String, String> readReadFile(String file_name) throws FileNotFoundException{
+    Scanner scan_file = new Scanner(new File(file_name));
+    HashMap<String, String> reads = new HashMap<String, String>();
+
+    while(scan_file.hasNext()){
+      String line = scan_file.nextLine().toString();
+      if(line.charAt(0) == '>'){
+        reads.put(line.substring(1), scan_file.nextLine().toString());
+      }
+    }
+    return reads;
+
   }
 
   static ArrayList<ArrayList> readSequenceFile(String file_name) throws FileNotFoundException {
