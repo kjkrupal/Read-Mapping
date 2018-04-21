@@ -31,9 +31,33 @@ public class ReadMapping{
 
     DFS_PrepareST(root, A);
 
-    
+    mapReads(root);
 
   }
+
+  public void mapReads(Node root){
+
+    //For all reads
+    for(String key : reads.keySet()){
+
+      //Get a single read
+      String read = reads.get(key);
+
+      //FindLoc gives a list of candidate regions where reads maps
+      ArrayList<Integer> L = findLoc(read, root, 0);
+
+      //For each candidate region
+      for(int j : L){
+
+      }
+    }
+
+  }
+
+  public ArrayList<Integer> findLoc(String read){
+
+  }
+
   public void DFS_PrepareST(Node node, int A[]){
 
     if(node == null)
