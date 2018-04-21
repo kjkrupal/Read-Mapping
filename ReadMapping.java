@@ -1,39 +1,77 @@
 import java.util.ArrayList;
 import java.util.TreeMap;
+import java.util.HashMap;
+public class ReadMapping{
 
-public class SuffixTreeConstruction{
-
-  String sequence_name;
-  String sequence;
+  String sequence_name, sequence;
   Node first;
-  int start;
-  int end;
-  int max;
-  int n;
-  int node_id;
-  int leaf_id;
-  char[] string;
-  char[] alphabet;
-  int alphabet_length;
+  int start, end, max, n, leaf_id, node_id, alphabet_length;
+  char[] string, alphabet;
   ArrayList <Integer> index = new ArrayList<Integer>();
-  //@SuppressWarnings('unchecked')
   ArrayList <Object> list;
+  HashMap<String, String> reads;
+  int A[];
+  int nextIndex;
 
-  public SuffixTreeConstruction(String sequence, String sequence_name, char[] alphabet){
+  public ReadMapping(String sequence, String sequence_name, HashMap<String, String> reads, char[] alphabet){
     this.sequence_name = sequence_name;
     this.sequence = sequence + "$";
     this.n = this.sequence.length();
     this.string = this.sequence.toCharArray();
     this.alphabet = alphabet;
     this.alphabet_length = alphabet.length;
+    this.reads = reads;
+    A = new int[n];
   }
 
-  public void createSuffixTree(){
+  public void begin(){
+
+    //Create suffix tree for reference genome
+    Node root = createSuffixTree();
+
+    DFS_PrepareST(root, A);
+
+    
+
+  }
+  public void DFS_PrepareST(Node node, int A[]){
+
+    if(node == null)
+      return;
+
+    if(node.children == null){
+
+      A[nextIndex] = node.id;
+
+      if(node.depth >= 25){
+        node.start_leaf = nextIndex;
+        node.end_leaf = nextIndex;
+      }
+      nextIndex++;
+      return;
+    }
+    else{
+      for(char ch : node.children.keySet()){
+        DFS_PrepareST(node.children.get(ch), A);
+      }
+    }
+
+    if(node.depth >= 25){
+      char first_key = (Character) node.children.firstKey();
+      char last_key = (Character) node.children.lastKey();
+      Node u_left = node.children.get(first_key);
+      Node u_right = node.children.get(last_key);
+      node.start_leaf = u_left.start_leaf;
+      node.end_leaf = u_right.end_leaf;
+    }
+  }
+
+  public Node createSuffixTree(){
     //Initialize the starting index
     int i = 0;
 
     //Initialize root node
-    Node root = new Node(node_id, null, -1, -1, null, 0, null);
+    Node root = new Node(node_id, null, -1, -1, null, 0, null, -1, -1);
 
     //Set the suffix link of root to root itself
     root.suffix_link = root;
@@ -58,15 +96,7 @@ public class SuffixTreeConstruction{
       i++;
     }
 
-    //Display children of a node
-    displayChildren(root);
-
-    //Output the BWT index
-    printBWTIndex(root);
-
-    //Print the indexes of longest exact matching repeating string
-    exactMatchingRepeat(root);
-
+    return root;
 
   }
 
@@ -168,7 +198,7 @@ public class SuffixTreeConstruction{
       //node_id++;
 
       //Put key-value pair in the newly created TreeMap
-      v.children.put(string[i], new Node(leaf_id, v, i, n - 1, null, v.depth + (n - i), null));
+      v.children.put(string[i], new Node(leaf_id, v, i, n - 1, null, v.depth + (n - i), null, -1, -1));
 
       //Return suffix node
       return v.children.get(string[i]);
@@ -183,7 +213,7 @@ public class SuffixTreeConstruction{
       //node_id++;
 
       //Add a new child in the existing TreeMap
-      v.children.put(string[i], new Node(leaf_id, v, i, n - 1, null, v.depth + (n - i), null));
+      v.children.put(string[i], new Node(leaf_id, v, i, n - 1, null, v.depth + (n - i), null, -1, -1));
 
       //Return suffix node
       return v.children.get(string[i]);
@@ -214,7 +244,7 @@ public class SuffixTreeConstruction{
           node_id++;
 
           //The following line creates a new internal node
-          v.children.put(string[id], new Node(node_id, v, child.start, start - 1, null, v.depth + (start - child.start), null));
+          v.children.put(string[id], new Node(node_id, v, child.start, start - 1, null, v.depth + (start - child.start), null, -1, -1));
 
           //Get reference of newly created internal node
           Node new_internal_node = v.children.get(string[id]);
@@ -235,7 +265,7 @@ public class SuffixTreeConstruction{
           //node_id++;
 
           //The following line creates a new leaf node
-          new_internal_node.children.put(string[i], new Node(leaf_id, child_1.parent, i, n - 1, null, child_1.parent.depth + (n - i), null));
+          new_internal_node.children.put(string[i], new Node(leaf_id, child_1.parent, i, n - 1, null, child_1.parent.depth + (n - i), null, -1, -1));
 
           //Return the suffix node
           return new_internal_node.children.get(string[i]);
@@ -254,7 +284,7 @@ public class SuffixTreeConstruction{
         //node_id++;
 
         //Create a new child of v node with string starting from next character
-        child.children.put(string[i], new Node(leaf_id, v, i, n - 1, null, v.depth + (n - i), null));
+        child.children.put(string[i], new Node(leaf_id, v, i, n - 1, null, v.depth + (n - i), null, -1, -1));
 
         //Return the suffix node
         return child.children.get(string[i]);
@@ -286,7 +316,7 @@ public class SuffixTreeConstruction{
       node_id++;
       //Create v
       v_prime.children.put(string[temp.start], new Node(node_id, v_prime, temp.start, (beta.length() + temp.start - 1),
-                                                null, v_prime.depth + (beta.length() + temp.start - temp.start), null));
+                                                null, v_prime.depth + (beta.length() + temp.start - temp.start), null, -1, -1));
       //Get node v
       Node v = v_prime.children.get(string[temp.start]);
 

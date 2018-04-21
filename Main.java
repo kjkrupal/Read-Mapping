@@ -13,12 +13,12 @@ public class Main{
         throw new InputArgumentException("Specify proper reference file path, read file path and alphabet file path in order");
 
       String reference_file_name = args[0];
-      if(!new File(sequence_file_name).exists())
+      if(!new File(reference_file_name).exists())
         throw new InputArgumentException("Specify proper file name and path for reference sequence file");
 
       String read_file_name = args[1];
-      if(!new File(alphabet_file_name).exists())
-        throw new InputArgumentException("Specify proper file name and path for reads file");
+      if(!new File(read_file_name).exists())
+        throw new InputArgumentException("Specify proper file name and path for read file");
 
       String alphabet_file_name = args[2];
       if(!new File(alphabet_file_name).exists())
@@ -32,9 +32,9 @@ public class Main{
 
       char[] alphabet = readAlphabetFile(alphabet_file_name);
 
-      SuffixTreeConstruction tree = new SuffixTreeConstruction((String)list.get(0).get(0), (String)list.get(1).get(0), alphabet);
+      ReadMapping mapping = new ReadMapping((String)list.get(0).get(0), (String)list.get(1).get(0), reads, alphabet);
 
-      tree.createSuffixTree();
+      mapping.begin();
     }
     catch(Exception exception){
       System.out.println(exception);
@@ -55,7 +55,7 @@ public class Main{
 
   }
 
-  static ArrayList<ArrayList> readSequenceFile(String file_name) throws FileNotFoundException {
+  static ArrayList<ArrayList> readReferenceFile(String file_name) throws FileNotFoundException {
     Scanner scan_file = new Scanner(new File(file_name));
     ArrayList<String> key_list = new ArrayList<String>();
     ArrayList<String> sequence_list = new ArrayList<String>();

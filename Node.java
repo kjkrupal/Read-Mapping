@@ -10,8 +10,10 @@ public class Node{
   TreeMap<Character, Node> children;
   int depth;
   static int count;
+  int start_leaf;
+  int end_leaf;
 
-  public Node(int id, Node parent, int start, int end, TreeMap<Character,Node> children, int depth, Node suffix_link){
+  public Node(int id, Node parent, int start, int end, TreeMap<Character,Node> children, int depth, Node suffix_link, int start_leaf, int end_leaf){
     this.suffix_link = suffix_link;
     this.id = id;
     this.parent = parent;
