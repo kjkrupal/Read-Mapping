@@ -64,6 +64,7 @@ public class ReadMapping{
 
         i++;
 
+
       }
       //Check for value of x
       if(deepestNode.depth >= 25){
@@ -90,20 +91,147 @@ public class ReadMapping{
         }
 
       }
+      else{
+        //No alignment required: Miss
+      }
 
 
     }
 
   }
 
+  public void localAlignment(String reference, String read){
+
+    int match_score;
+    int mismatch_score;
+    int opening_gap_penalty;
+    int extension_gap_penalty;
+    int m;
+    int n;
+    char[] str1 = refernce.toCharArray();
+    char[] str2 = read.toCharArray();
+    Cell[][] T;
+    int total_opening_gaps;
+    int total_gaps;
+    int total_matches;
+    int total_mismatches;
+    int optimum_score;
+    float percent_identity;
+    float percent_gap;
+
+    T[0][0] = new Cell(0, 0, 0);
+
+    for(int i = 1; i <= m; i++){
+      T[i][0] = new Cell(0, 0, 0);
+    }
+    for(int j = 1; j <= n; j++){
+      T[0][j] = new Cell(0, 0, 0);
+    }
+
+    for(int i = 1; i <= m; i++){
+      for (int j = 1; j <= n; j++) {
+        T[i][j] = new Cell(findMax(T[i-1][j-1].deletion_score,
+                                   T[i-1][j-1].substitution_score,
+                                   T[i-1][j-1].insertion_score,
+                                   0) + S(str1[i-1], str2[j-1]),
+
+                           findMax(T[i-1][j].deletion_score + extension_gap_penalty,
+                                   T[i-1][j].substitution_score + opening_gap_penalty + extension_gap_penalty,
+                                   T[i-1][j].insertion_score + opening_gap_penalty + extension_gap_penalty,
+                                   0),
+
+                           findMax(T[i][j-1].deletion_score + opening_gap_penalty + extension_gap_penalty,
+                                   T[i][j-1].substitution_score + opening_gap_penalty + extension_gap_penalty,
+                                   T[i][j-1].insertion_score + extension_gap_penalty,
+                                   0));
+      }
+    }
+    int[] position = new int[2];
+    int value = -999999;
+    for(int i = 0; i <= m; i++){
+      for(int j = 0; j <= n; j++){
+        if(findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score) >= value){
+                value = findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score);
+                position[0] = i;
+                position[1] = j;
+        }
+      }
+    }
+    int maximum = 0;
+    int i = position[0];
+    int j = position[1];
+    while(true){
+      maximum = findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score);
+      if(findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score) == 0)
+        break;
+
+        if(maximum == (findMax(T[i][j-1].deletion_score + opening_gap_penalty + extension_gap_penalty,
+                               T[i][j-1].substitution_score + opening_gap_penalty + extension_gap_penalty,
+                               T[i][j-1].insertion_score + extension_gap_penalty))){
+          finalS1 = "-" + finalS1;
+          finalS2 = str2[j-1] + finalS2;
+          j--;
+        }
+      else if(maximum == (findMax(T[i-1][j].deletion_score + extension_gap_penalty,
+                             T[i-1][j].substitution_score + opening_gap_penalty + extension_gap_penalty,
+                             T[i-1][j].insertion_score + opening_gap_penalty + extension_gap_penalty))){
+        finalS1 = str1[i-1] + finalS1;
+        finalS2 = "-" + finalS2;
+        i--;
+      }
+      else if(maximum == (findMax(T[i-1][j-1].deletion_score,
+                             T[i-1][j-1].substitution_score,
+                             T[i-1][j-1].insertion_score) + S(str1[i-1], str2[j-1]))){
+        finalS1 = str1[i-1] + finalS1;
+        finalS2 = str2[j-1] + finalS2;
+        i--;
+        j--;
+      }
+
+    }
+    i = position[0];
+    j = position[1];
+    optimum_score = findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score);
+  }
+
   public Node findLoc(String read, Node node){
 
-    int i = 0;
+    int read_pointer = 0;
 
-    while(i < read.length()){
+    boolean mismatch = false;
 
-      node.children.get(read.charAt(i));
+    while(read_pointer < read.length()){
+
+      if(node.children.containsKey(read.charAt(read_pointer))){
+
+        Node current = node.children.get(read.charAt(read_pointer));
+
+        int start = current.start;
+        int end = current.end;
+
+        while(start <= end){
+
+          if(read.charAt(read_pointer) == string[start]){
+            start++;
+            read_pointer++;
+          }
+          else{
+            mismatch = true;
+            break;
+          }
+        }
+
+        if(mismatch){
+          break;
+        }
+
+      }
+      else{
+        break;
+      }
+      node = current;
     }
+    return node;
 
   }
 
@@ -406,78 +534,6 @@ public class ReadMapping{
 
       return v;
     }
-  }
-
-  public void printBWTIndex(Node root){
-
-    traverse(root);
-
-    for(int k : index){
-      if(k == -1)
-        System.out.println(string[n - 1]);
-      else
-        System.out.println(string[k]);
-    }
-  }
-
-  public void traverse(Node node){
-
-    if(node.children == null){
-      index.add(node.id - 2);
-    }
-    else{
-
-      for(char ch : node.children.keySet()){
-        traverse(node.children.get(ch));
-      }
-    }
-  }
-
-  public void exactMatchingRepeat(Node root){
-
-    for (char c : root.children.keySet() ) {
-      if(c == '$' || root.children.get(c).children == null){
-        continue;
-      }
-      else{
-        this.first = root.children.get(c);
-
-        lastInternalNode(this.first);
-      }
-    }
-
-    System.out.println(start + " " + end);
-  }
-
-  public void lastInternalNode(Node first){
-
-    int diff;
-    int s;
-    int e;
-
-    for(char d : first.children.keySet()){
-      if(first.children.get(d).children == null){
-        Node last = first;
-        s = this.first.start;
-        e = last.end;
-
-        diff = e - s + 1;
-
-        if(max < diff){
-          max = diff;
-          this.start = s;
-          this.end = e;
-        }
-
-      }
-      else{
-        lastInternalNode(first.children.get(d));
-      }
-    }
-  }
-
-  public void displayChildren(Node node){
-    System.out.println(node.children);
   }
 
 }
