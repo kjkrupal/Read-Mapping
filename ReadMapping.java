@@ -12,6 +12,7 @@ public class ReadMapping{
   HashMap<String, String> reads;
   int A[];
   int nextIndex;
+  Node deepestNode;
 
   public ReadMapping(String sequence, String sequence_name, HashMap<String, String> reads, char[] alphabet){
     this.sequence_name = sequence_name;
@@ -43,18 +44,66 @@ public class ReadMapping{
       //Get a single read
       String read = reads.get(key);
 
-      //FindLoc gives a list of candidate regions where reads maps
-      ArrayList<Integer> L = findLoc(read, root, 0);
+      int i = 0;
 
-      //For each candidate region
-      for(int j : L){
+      while(i < read.length()){
+
+        //FindLoc returns a node for current read
+        Node temp = findLoc(read.substring(i), root);
+
+        //Update deepest node
+        if(deepestNode != null){
+          if(temp.depth > deepestNode.depth){
+            deepestNode = temp;
+          }
+        }
+        //For initial case when DeepestNode is not set
+        else{
+          deepestNode = temp;
+        }
+
+        i++;
 
       }
+      //Check for value of x
+      if(deepestNode.depth >= 25){
+
+        //For all candidate position
+        for(int index = deepestNode.start_leaf; index <= deepestNode.end_leaf; index++){
+
+          int start = index - read.length();
+          int end = index + deepestNode.depth + read.length();
+
+          if(start > 0 && end <= n - 2){
+            String reference = sequence.substring(start, end + 1);
+          }
+          else if(start > 0){
+            String reference = sequence.substring(start, n - 1);
+          }
+          else{
+            String reference = sequence.substring(0, end + 1);
+          }
+
+          localAlignment(reference, read);
+
+
+        }
+
+      }
+
+
     }
 
   }
 
-  public ArrayList<Integer> findLoc(String read){
+  public Node findLoc(String read, Node node){
+
+    int i = 0;
+
+    while(i < read.length()){
+
+      node.children.get(read.charAt(i));
+    }
 
   }
 
