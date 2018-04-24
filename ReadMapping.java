@@ -59,16 +59,16 @@ public class ReadMapping{
 
       //This while loop for every suffix of a particular read
       while(i < read.length() - 25){
-        //System.out.println(i);
+
         //FindLoc returns a node for current read
-        System.out.println(i);
+        //System.out.println(i);
         list = findLoc(read.substring(i), root);
 
         Node temp = (Node)list.get(0);
         int count = (Integer)list.get(1);
-
+        //System.out.println(temp.depth);
         //Check if total matches are greater than 25, If yes then only align it
-        if(count >= 25 && temp.depth >= 25){
+        if(count >= 25){
 
           if(deepestNode != null){
             //System.out.println(count);
@@ -96,40 +96,30 @@ public class ReadMapping{
         //For all candidate position
         for(int index = deepestNode.start_leaf; index <= deepestNode.end_leaf; index++){
 
+          //System.out.println(A[index]);
+
+          ArrayList values;
           int i_1 = A[index] - 1;
-          int i_2 = i_1 + deepestNode.depth - 1;
+          int i_2 = A[index];
+
+          //System.out.println("I2: " + i_2);
           //System.out.println(deepestNode.depth);
-          int reference_start;
-          int reference_end;
 
-          if(i_1 - 1 - read.length() <= 0)
-            reference_start = 0;
+          int start = i_1 - read.length();
+          int end = i_2 + read.length();
 
-          else
-            reference_start = i_1 - 1 - read.length();
+          if(start < 0)
+            start = 0;
 
-          if(i_2 + read.length() >= n - 2){
-            reference_end = n - 2;
-            //System.out.println("1");
-          }
-          else{
-            reference_end = i_2 + read.length();
-            //System.out.println("2");
-          }
+          if(end > n - 1)
+            end = n - 1;
 
+          values = localAlignment(sequence.substring(start, end), read);
 
-          ArrayList list_a, list_b;
+          identity = (Integer) values.get(0) / (Integer)values.get(1);
+          length_coverage = (Integer)values.get(1) / read.length();
 
-          double identity = 0.0;
-          double length_coverage = 0.0;
-
-          list_a = localAlignment(sequence.substring(reference_start, i_1 + 1), read.substring(0, read_ptr));
-
-          list_b = localAlignment(sequence.substring(i_2 + 1, reference_end), read.substring(deepestNode.depth + read_ptr - 1, read.length()));
-
-          identity = (((Integer)list_a.get(0) + deepestNode.depth + (Integer)list_b.get(0)) / ((Integer)list_a.get(1) + deepestNode.depth + (Integer)list_b.get(1))) * 100;
-
-          length_coverage = (((Integer)list_a.get(1) + deepestNode.depth + (Integer)list_b.get(1)) / read.length()) * 100;
+          System.out.println("Identity: " + identity + " Coverage: " + length_coverage);
 
           if(identity >= 90.0 && length_coverage >= 80.0){
 
@@ -188,7 +178,7 @@ public class ReadMapping{
     while(read_pointer < read.length()){
 
       if(node.children.containsKey(read.charAt(read_pointer))){
-
+        //System.out.println("here");
         current = node.children.get(read.charAt(read_pointer));
 
         int start = current.start;
@@ -197,6 +187,7 @@ public class ReadMapping{
         while(start <= end){
 
           if(read.charAt(read_pointer) == string[start]){
+
             count++;
             start++;
             read_pointer++;
