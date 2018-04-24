@@ -15,10 +15,11 @@ public class ReadMapping{
   int nextIndex;
   Node deepestNode;
   int align_position;
-  float identity;
+  double identity;
   float length_coverage;
   int count;
   int read_ptr;
+  int candidate = -1;
 
   public ReadMapping(String sequence, String sequence_name, HashMap<String, String> reads, char[] alphabet){
     this.sequence_name = sequence_name;
@@ -43,7 +44,7 @@ public class ReadMapping{
   }
 
   public void mapReads(Node root){
-
+    try{
     ArrayList list;
     //For all reads
     for(String key : reads.keySet()){
@@ -57,18 +58,20 @@ public class ReadMapping{
       int i = 0;
 
       //This while loop for every suffix of a particular read
-      while(i < read.length()){
-
+      while(i < read.length() - 25){
+        //System.out.println(i);
         //FindLoc returns a node for current read
+        System.out.println(i);
         list = findLoc(read.substring(i), root);
 
-        Node temp = list.get(0);
-        int count = list.get(1);
+        Node temp = (Node)list.get(0);
+        int count = (Integer)list.get(1);
 
         //Check if total matches are greater than 25, If yes then only align it
-        if(count >= 25){
+        if(count >= 25 && temp.depth >= 25){
 
           if(deepestNode != null){
+            //System.out.println(count);
             //Update deepestNode
             if(temp.depth > deepestNode.depth){
               deepestNode = temp;
@@ -94,43 +97,51 @@ public class ReadMapping{
         for(int index = deepestNode.start_leaf; index <= deepestNode.end_leaf; index++){
 
           int i_1 = A[index] - 1;
-          int i_2 = i_1 + deepestNode.depth;
+          int i_2 = i_1 + deepestNode.depth - 1;
+          //System.out.println(deepestNode.depth);
+          int reference_start;
+          int reference_end;
 
           if(i_1 - 1 - read.length() <= 0)
-            int reference_start = 0;
+            reference_start = 0;
 
           else
-            int reference_start = i_1 - 1 - read.length();
+            reference_start = i_1 - 1 - read.length();
 
-          if(i_2 + read.length() >= n - 2)
-            int reference_end = n - 2;
+          if(i_2 + read.length() >= n - 2){
+            reference_end = n - 2;
+            //System.out.println("1");
+          }
+          else{
+            reference_end = i_2 + read.length();
+            //System.out.println("2");
+          }
 
-          else
-            int reference_end = i_2 + l;
 
           ArrayList list_a, list_b;
 
-          float identity = 0.0;
-          float length_coverage = 0.0;
+          double identity = 0.0;
+          double length_coverage = 0.0;
 
-          list_a = localAlignment(reference.substring(reference_start, i_1 + 1), read.substring(0, read_ptr));
+          list_a = localAlignment(sequence.substring(reference_start, i_1 + 1), read.substring(0, read_ptr));
 
-          list_b = localAlignment(reference.substring(i_2 + 1,reference_end), read.substring(deepestNode.depth + read_ptr - 1, read.length()));
+          list_b = localAlignment(sequence.substring(i_2 + 1, reference_end), read.substring(deepestNode.depth + read_ptr - 1, read.length()));
 
-          identity = ((list_a.get(0) + deepestNode.depth + list_b.get(0)) / (list_a.get(1) + deepestNode.depth + list_b.get(1))) * 100;
+          identity = (((Integer)list_a.get(0) + deepestNode.depth + (Integer)list_b.get(0)) / ((Integer)list_a.get(1) + deepestNode.depth + (Integer)list_b.get(1))) * 100;
 
-          length_coverage = ((list_a.get(1) + deepestNode.depth + list_b.get(1)) / read.length()) * 100;
+          length_coverage = (((Integer)list_a.get(1) + deepestNode.depth + (Integer)list_b.get(1)) / read.length()) * 100;
 
-          if(identity >= 90 && length_coverage >= 80){
+          if(identity >= 90.0 && length_coverage >= 80.0){
 
             if(length_coverage >= this.length_coverage){
               this.identity = identity;
+              this.candidate = A[index] - 1;
             }
 
           }
 
         }
-
+        System.out.println("Hit at: " + this.candidate);
       }
       else{
         //No alignment required: Miss
@@ -138,6 +149,9 @@ public class ReadMapping{
       }
 
 
+    }}
+    catch(Exception e){
+      e.printStackTrace();
     }
 
   }
@@ -169,12 +183,13 @@ public class ReadMapping{
     int read_pointer = 0;
     int count = 0;
     boolean mismatch = false;
+    Node current;
 
     while(read_pointer < read.length()){
 
       if(node.children.containsKey(read.charAt(read_pointer))){
 
-        Node current = node.children.get(read.charAt(read_pointer));
+        current = node.children.get(read.charAt(read_pointer));
 
         int start = current.start;
         int end = current.end;
@@ -205,6 +220,7 @@ public class ReadMapping{
     list.add(node);
     list.add(count);
 
+    return list;
   }
 
   public void DFS_PrepareST(Node node, int A[]){
