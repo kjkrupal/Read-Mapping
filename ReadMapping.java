@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.HashMap;
+
 public class ReadMapping{
 
   String sequence_name, sequence;
@@ -13,6 +14,11 @@ public class ReadMapping{
   int A[];
   int nextIndex;
   Node deepestNode;
+  int align_position;
+  float identity;
+  float length_coverage;
+  int count;
+  int read_ptr;
 
   public ReadMapping(String sequence, String sequence_name, HashMap<String, String> reads, char[] alphabet){
     this.sequence_name = sequence_name;
@@ -38,61 +44,97 @@ public class ReadMapping{
 
   public void mapReads(Node root){
 
+    ArrayList list;
     //For all reads
     for(String key : reads.keySet()){
+
+      deepestNode = null;
+      read_ptr = -1;
 
       //Get a single read
       String read = reads.get(key);
 
       int i = 0;
 
+      //This while loop for every suffix of a particular read
       while(i < read.length()){
 
         //FindLoc returns a node for current read
-        Node temp = findLoc(read.substring(i), root);
+        list = findLoc(read.substring(i), root);
 
-        //Update deepest node
-        if(deepestNode != null){
-          if(temp.depth > deepestNode.depth){
+        Node temp = list.get(0);
+        int count = list.get(1);
+
+        //Check if total matches are greater than 25, If yes then only align it
+        if(count >= 25){
+
+          if(deepestNode != null){
+            //Update deepestNode
+            if(temp.depth > deepestNode.depth){
+              deepestNode = temp;
+              read_ptr = i;
+            }
+          }
+          //For initial case when DeepestNode is not set
+          else{
             deepestNode = temp;
+            read_ptr = i;
           }
         }
-        //For initial case when DeepestNode is not set
-        else{
-          deepestNode = temp;
-        }
-
+        //Increment i for next suffix of current read
         i++;
-
-
       }
-      //Check for value of x
-      if(deepestNode.depth >= 25){
+      //At the end of this while loop we have a deepestNode which has maximum number of matches. Now
+      //we need to get the candidate list of regions for that substring
+
+      //If the matches were never greater than 25, deepestNode would be null
+      if(deepestNode != null){
 
         //For all candidate position
         for(int index = deepestNode.start_leaf; index <= deepestNode.end_leaf; index++){
 
-          int start = index - read.length();
-          int end = index + deepestNode.depth + read.length();
+          int i_1 = A[index] - 1;
+          int i_2 = i_1 + deepestNode.depth;
 
-          if(start > 0 && end <= n - 2){
-            String reference = sequence.substring(start, end + 1);
-          }
-          else if(start > 0){
-            String reference = sequence.substring(start, n - 1);
-          }
-          else{
-            String reference = sequence.substring(0, end + 1);
-          }
+          if(i_1 - 1 - read.length() <= 0)
+            int reference_start = 0;
 
-          localAlignment(reference, read);
+          else
+            int reference_start = i_1 - 1 - read.length();
 
+          if(i_2 + read.length() >= n - 2)
+            int reference_end = n - 2;
+
+          else
+            int reference_end = i_2 + l;
+
+          ArrayList list_a, list_b;
+
+          float identity = 0.0;
+          float length_coverage = 0.0;
+
+          list_a = localAlignment(reference.substring(reference_start, i_1 + 1), read.substring(0, read_ptr));
+
+          list_b = localAlignment(reference.substring(i_2 + 1,reference_end), read.substring(deepestNode.depth + read_ptr - 1, read.length()));
+
+          identity = ((list_a.get(0) + deepestNode.depth + list_b.get(0)) / (list_a.get(1) + deepestNode.depth + list_b.get(1))) * 100;
+
+          length_coverage = ((list_a.get(1) + deepestNode.depth + list_b.get(1)) / read.length()) * 100;
+
+          if(identity >= 90 && length_coverage >= 80){
+
+            if(length_coverage >= this.length_coverage){
+              this.identity = identity;
+            }
+
+          }
 
         }
 
       }
       else{
         //No alignment required: Miss
+        System.out.println("No hit");
       }
 
 
@@ -100,104 +142,32 @@ public class ReadMapping{
 
   }
 
-  public void localAlignment(String reference, String read){
+  public ArrayList <Integer> localAlignment(String reference, String read){
 
-    int match_score;
-    int mismatch_score;
-    int opening_gap_penalty;
-    int extension_gap_penalty;
-    int m;
-    int n;
-    char[] str1 = refernce.toCharArray();
-    char[] str2 = read.toCharArray();
-    Cell[][] T;
-    int total_opening_gaps;
-    int total_gaps;
-    int total_matches;
-    int total_mismatches;
-    int optimum_score;
-    float percent_identity;
-    float percent_gap;
+    ArrayList <Integer> list = new ArrayList <Integer>();
 
-    T[0][0] = new Cell(0, 0, 0);
+    int align_position = 0;
 
-    for(int i = 1; i <= m; i++){
-      T[i][0] = new Cell(0, 0, 0);
-    }
-    for(int j = 1; j <= n; j++){
-      T[0][j] = new Cell(0, 0, 0);
-    }
 
-    for(int i = 1; i <= m; i++){
-      for (int j = 1; j <= n; j++) {
-        T[i][j] = new Cell(findMax(T[i-1][j-1].deletion_score,
-                                   T[i-1][j-1].substitution_score,
-                                   T[i-1][j-1].insertion_score,
-                                   0) + S(str1[i-1], str2[j-1]),
+    int match_score = 1;
+    int mismatch_score = -2;
+    int extension_gap_penalty = -1;
+    int opening_gap_penalty = -5;
 
-                           findMax(T[i-1][j].deletion_score + extension_gap_penalty,
-                                   T[i-1][j].substitution_score + opening_gap_penalty + extension_gap_penalty,
-                                   T[i-1][j].insertion_score + opening_gap_penalty + extension_gap_penalty,
-                                   0),
+    Alignment alignment = new Alignment(reference, read, "reference", "read", match_score, mismatch_score, opening_gap_penalty, extension_gap_penalty);
 
-                           findMax(T[i][j-1].deletion_score + opening_gap_penalty + extension_gap_penalty,
-                                   T[i][j-1].substitution_score + opening_gap_penalty + extension_gap_penalty,
-                                   T[i][j-1].insertion_score + extension_gap_penalty,
-                                   0));
-      }
-    }
-    int[] position = new int[2];
-    int value = -999999;
-    for(int i = 0; i <= m; i++){
-      for(int j = 0; j <= n; j++){
-        if(findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score) >= value){
-                value = findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score);
-                position[0] = i;
-                position[1] = j;
-        }
-      }
-    }
-    int maximum = 0;
-    int i = position[0];
-    int j = position[1];
-    while(true){
-      maximum = findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score);
-      if(findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score) == 0)
-        break;
+    list = alignment.localAlignment(alignment);
 
-        if(maximum == (findMax(T[i][j-1].deletion_score + opening_gap_penalty + extension_gap_penalty,
-                               T[i][j-1].substitution_score + opening_gap_penalty + extension_gap_penalty,
-                               T[i][j-1].insertion_score + extension_gap_penalty))){
-          finalS1 = "-" + finalS1;
-          finalS2 = str2[j-1] + finalS2;
-          j--;
-        }
-      else if(maximum == (findMax(T[i-1][j].deletion_score + extension_gap_penalty,
-                             T[i-1][j].substitution_score + opening_gap_penalty + extension_gap_penalty,
-                             T[i-1][j].insertion_score + opening_gap_penalty + extension_gap_penalty))){
-        finalS1 = str1[i-1] + finalS1;
-        finalS2 = "-" + finalS2;
-        i--;
-      }
-      else if(maximum == (findMax(T[i-1][j-1].deletion_score,
-                             T[i-1][j-1].substitution_score,
-                             T[i-1][j-1].insertion_score) + S(str1[i-1], str2[j-1]))){
-        finalS1 = str1[i-1] + finalS1;
-        finalS2 = str2[j-1] + finalS2;
-        i--;
-        j--;
-      }
+    return list;
 
-    }
-    i = position[0];
-    j = position[1];
-    optimum_score = findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score);
+
   }
 
-  public Node findLoc(String read, Node node){
+  public ArrayList findLoc(String read, Node node){
 
+    ArrayList list = new ArrayList();
     int read_pointer = 0;
-
+    int count = 0;
     boolean mismatch = false;
 
     while(read_pointer < read.length()){
@@ -212,6 +182,7 @@ public class ReadMapping{
         while(start <= end){
 
           if(read.charAt(read_pointer) == string[start]){
+            count++;
             start++;
             read_pointer++;
           }
@@ -231,7 +202,8 @@ public class ReadMapping{
       }
       node = current;
     }
-    return node;
+    list.add(node);
+    list.add(count);
 
   }
 
