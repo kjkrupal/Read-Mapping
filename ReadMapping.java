@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 public class ReadMapping{
 
@@ -10,18 +11,17 @@ public class ReadMapping{
   char[] string, alphabet;
   ArrayList <Integer> index = new ArrayList<Integer>();
   ArrayList <Object> list;
-  HashMap<String, String> reads;
+  LinkedHashMap<String, String> reads;
   int A[];
   int nextIndex;
   Node deepestNode;
   int align_position;
-  double identity;
-  float length_coverage;
   int count;
   int read_ptr;
-  int candidate = -1;
+  PrintWriter writer;
 
-  public ReadMapping(String sequence, String sequence_name, HashMap<String, String> reads, char[] alphabet){
+  public ReadMapping(String sequence, String sequence_name, LinkedHashMap<String, String> reads, char[] alphabet){
+    writer = new PrintWriter("the-file-name.txt", "UTF-8");
     this.sequence_name = sequence_name;
     this.sequence = sequence + "$";
     this.n = this.sequence.length();
@@ -49,6 +49,8 @@ public class ReadMapping{
     //For all reads
     for(String key : reads.keySet()){
 
+      HashMap <Integer, Node> map = new HashMap <Integer, Node> ();
+
       deepestNode = null;
       read_ptr = -1;
 
@@ -61,49 +63,43 @@ public class ReadMapping{
       while(i < read.length() - 25){
 
         //FindLoc returns a node for current read
-        //System.out.println(i);
         list = findLoc(read.substring(i), root);
 
-        Node temp = (Node)list.get(0);
-        int count = (Integer)list.get(1);
-        //System.out.println(temp.depth);
-        //Check if total matches are greater than 25, If yes then only align it
-        if(count >= 25){
+        Node temp = (Node) list.get(0);
+        int count = (Integer) list.get(1);
 
-          if(deepestNode != null){
-            //System.out.println(count);
-            //Update deepestNode
-            if(temp.depth > deepestNode.depth){
-              deepestNode = temp;
-              read_ptr = i;
-            }
-          }
-          //For initial case when DeepestNode is not set
-          else{
-            deepestNode = temp;
-            read_ptr = i;
-          }
-        }
+        map.put(count, temp);
         //Increment i for next suffix of current read
         i++;
       }
-      //At the end of this while loop we have a deepestNode which has maximum number of matches. Now
-      //we need to get the candidate list of regions for that substring
+      //System.out.println(map);
 
+      int val = -1;
+
+      for(int k : map.keySet()){
+        if(k > val){
+          val = k;
+        }
+      }
+      //System.out.println("Val: " + val);
+      deepestNode = map.get(val);
+      //System.out.println("Deepest node depth: " + deepestNode.depth);
       //If the matches were never greater than 25, deepestNode would be null
-      if(deepestNode != null){
+      map = null;
+      if(val >= 25){
 
+        HashMap <Double, Integer> hits = new HashMap <Double, Integer> ();
         //For all candidate position
         for(int index = deepestNode.start_leaf; index <= deepestNode.end_leaf; index++){
 
+          double identity = 0.0;
+          double length_coverage = 0.0;
+          int candidate = -1;
           //System.out.println(A[index]);
 
-          ArrayList values;
+          ArrayList<Integer> values;
           int i_1 = A[index] - 1;
           int i_2 = A[index];
-
-          //System.out.println("I2: " + i_2);
-          //System.out.println(deepestNode.depth);
 
           int start = i_1 - read.length();
           int end = i_2 + read.length();
@@ -116,22 +112,33 @@ public class ReadMapping{
 
           values = localAlignment(sequence.substring(start, end), read);
 
-          identity = (Integer) values.get(0) / (Integer)values.get(1);
-          length_coverage = (Integer)values.get(1) / read.length();
+          Double v1 = (double)((Integer)values.get(0)).intValue();
+          Double v2 = (double)((Integer)values.get(1)).intValue();
 
-          System.out.println("Identity: " + identity + " Coverage: " + length_coverage);
+          identity = v1 / v2 * 100;
 
+          length_coverage = ((Integer) values.get(1) / read.length()) * 100;
+
+          //System.out.println("Matches: " + (Integer) values.get(0) + " Aligned Length: " + (Integer) values.get(1) + "Read length: " + read.length());
+          //System.out.println("Identity: " + identity + " Length coverage: " + length_coverage);
           if(identity >= 90.0 && length_coverage >= 80.0){
 
-            if(length_coverage >= this.length_coverage){
-              this.identity = identity;
-              this.candidate = A[index] - 1;
-            }
+            hits.put(length_coverage, A[index] - 1);
 
           }
 
         }
-        System.out.println("Hit at: " + this.candidate);
+
+        double cover = 0.0;
+
+        for(double d : hits.keySet()){
+          if(d >= cover){
+            cover = d;
+          }
+        }
+
+        System.out.println("Hit at: " + hits.get(cover));
+        hits = null;
       }
       else{
         //No alignment required: Miss
@@ -173,27 +180,31 @@ public class ReadMapping{
     int read_pointer = 0;
     int count = 0;
     boolean mismatch = false;
-    Node current;
+    Node current = null;
 
     while(read_pointer < read.length()){
 
       if(node.children.containsKey(read.charAt(read_pointer))){
-        //System.out.println("here");
+
         current = node.children.get(read.charAt(read_pointer));
 
         int start = current.start;
         int end = current.end;
 
         while(start <= end){
+          try{
+            if(read.charAt(read_pointer) == string[start]){
 
-          if(read.charAt(read_pointer) == string[start]){
-
-            count++;
-            start++;
-            read_pointer++;
+              count++;
+              start++;
+              read_pointer++;
+            }
+            else{
+              mismatch = true;
+              break;
+            }
           }
-          else{
-            mismatch = true;
+          catch(Exception e){
             break;
           }
         }
@@ -208,7 +219,7 @@ public class ReadMapping{
       }
       node = current;
     }
-    list.add(node);
+    list.add(current);
     list.add(count);
 
     return list;

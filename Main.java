@@ -3,6 +3,7 @@ import java.io.FileNotFoundException;
 import java.util.Scanner;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.io.File;
 
 public class Main{
@@ -28,7 +29,7 @@ public class Main{
       ArrayList<ArrayList> list = readReferenceFile(reference_file_name);
 
       @SuppressWarnings("unchecked")
-      HashMap<String, String> reads = readReadFile(read_file_name);
+      LinkedHashMap<String, String> reads = readReadFile(read_file_name);
 
       char[] alphabet = readAlphabetFile(alphabet_file_name);
 
@@ -41,9 +42,9 @@ public class Main{
     }
   }
 
-  static HashMap<String, String> readReadFile(String file_name) throws FileNotFoundException{
+  static LinkedHashMap<String, String> readReadFile(String file_name) throws FileNotFoundException{
     Scanner scan_file = new Scanner(new File(file_name));
-    HashMap<String, String> reads = new HashMap<String, String>();
+    LinkedHashMap<String, String> reads = new LinkedHashMap<String, String>();
 
     while(scan_file.hasNext()){
       String line = scan_file.nextLine().toString();
