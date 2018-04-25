@@ -2,6 +2,8 @@ import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.io.PrintWriter;
+import java.io.File;
 
 public class ReadMapping{
 
@@ -19,9 +21,15 @@ public class ReadMapping{
   int count;
   int read_ptr;
   PrintWriter writer;
+  File file;
+  long constructST;
+  long prepareST;
+  
 
-  public ReadMapping(String sequence, String sequence_name, LinkedHashMap<String, String> reads, char[] alphabet){
-    writer = new PrintWriter("the-file-name.txt", "UTF-8");
+  public ReadMapping(String sequence, String sequence_name, LinkedHashMap<String, String> reads, char[] alphabet) throws Exception{
+    file = new File ("MappingResults_PEACH.txt");
+    writer = new PrintWriter("MappingResults_PEACH.txt", "UTF-8");
+
     this.sequence_name = sequence_name;
     this.sequence = sequence + "$";
     this.n = this.sequence.length();
@@ -41,6 +49,20 @@ public class ReadMapping{
 
     mapReads(root);
 
+    writer.close();
+    //file.close();
+
+  }
+
+  public void outputResult(String read_name, int start, int end, int flag){
+
+    if(flag == 0){
+      int ending = start + end;
+      writer.println(read_name + " ->\tStarting index: " + start + "\tEnding index: " + ending);
+    }
+    else{
+      writer.println(read_name + " ->\tNo hit found");
+    }
   }
 
   public void mapReads(Node root){
@@ -136,13 +158,19 @@ public class ReadMapping{
             cover = d;
           }
         }
+        try{
+        //System.out.println("Hit at: " + hits.get(cover));
+        outputResult(key, hits.get(cover), read.length() - 1, 0);}
+        catch(Exception e){
+          outputResult(key, 0, 0, 1);
+          continue;
+        }
 
-        System.out.println("Hit at: " + hits.get(cover));
-        hits = null;
       }
       else{
         //No alignment required: Miss
-        System.out.println("No hit");
+        //System.out.println("No hit");
+        outputResult(key, 0, 0, 1);
       }
 
 
