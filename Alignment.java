@@ -53,19 +53,19 @@ public class Alignment{
     for(int i = 1; i <= m; i++){
       for (int j = 1; j <= n; j++) {
         T[i][j] = new Cell(findMax(T[i-1][j-1].deletion_score,
-                                   T[i-1][j-1].substitution_score,
-                                   T[i-1][j-1].insertion_score,
-                                   0) + S(str1[i-1], str2[j-1]),
+        T[i-1][j-1].substitution_score,
+        T[i-1][j-1].insertion_score,
+        0) + S(str1[i-1], str2[j-1]),
 
-                           findMax(T[i-1][j].deletion_score + extension_gap_penalty,
-                                   T[i-1][j].substitution_score + opening_gap_penalty + extension_gap_penalty,
-                                   T[i-1][j].insertion_score + opening_gap_penalty + extension_gap_penalty,
-                                   0),
+        findMax(T[i-1][j].deletion_score + extension_gap_penalty,
+        T[i-1][j].substitution_score + opening_gap_penalty + extension_gap_penalty,
+        T[i-1][j].insertion_score + opening_gap_penalty + extension_gap_penalty,
+        0),
 
-                           findMax(T[i][j-1].deletion_score + opening_gap_penalty + extension_gap_penalty,
-                                   T[i][j-1].substitution_score + opening_gap_penalty + extension_gap_penalty,
-                                   T[i][j-1].insertion_score + extension_gap_penalty,
-                                   0));
+        findMax(T[i][j-1].deletion_score + opening_gap_penalty + extension_gap_penalty,
+        T[i][j-1].substitution_score + opening_gap_penalty + extension_gap_penalty,
+        T[i][j-1].insertion_score + extension_gap_penalty,
+        0));
       }
     }
     int[] position = new int[2];
@@ -73,9 +73,9 @@ public class Alignment{
     for(int i = 0; i <= m; i++){
       for(int j = 0; j <= n; j++){
         if(findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score) >= value){
-                value = findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score);
-                position[0] = i;
-                position[1] = j;
+          value = findMax(T[i][j].substitution_score, T[i][j].deletion_score, T[i][j].insertion_score);
+          position[0] = i;
+          position[1] = j;
         }
       }
     }
@@ -189,8 +189,8 @@ public class Alignment{
 
     int value = -999999;
     for(int i = 0; i < numbers.length; i++)
-      if(numbers[i] >= value)
-        value = numbers[i];
+    if(numbers[i] >= value)
+    value = numbers[i];
     return value;
 
   }
@@ -204,10 +204,10 @@ public class Alignment{
     for(int i = 0; i < alignedS1.length; i++){
 
       if(alignedS1[i] == alignedS2[i])
-        total_matches ++ ;
+      total_matches ++ ;
 
       if(alignedS1[i] == '-' || alignedS2[i] == '-')
-        total_gaps ++;
+      total_gaps ++;
 
     }
 

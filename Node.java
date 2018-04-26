@@ -24,8 +24,8 @@ public class Node{
     count++;
   }
 
-  public Node(){
-    System.out.println(count);
+  public int nodeCount(){
+    return count;
   }
 
 

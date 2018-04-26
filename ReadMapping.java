@@ -22,13 +22,19 @@ public class ReadMapping{
   int read_ptr;
   PrintWriter writer;
   File file;
-  long constructST;
-  long prepareST;
-  
+  double constructST;
+  double prepareST;
+  double maptime;
+  int total_hits;
+  int no_hits;
+  int total_reads;
+  int total_alignments;
+  ArrayList <Integer> standard_deviation = new ArrayList <Integer> ();
 
   public ReadMapping(String sequence, String sequence_name, LinkedHashMap<String, String> reads, char[] alphabet) throws Exception{
-    file = new File ("MappingResults_PEACH.txt");
-    writer = new PrintWriter("MappingResults_PEACH.txt", "UTF-8");
+
+    file = new File ("Output/MappingResults_PEACH.txt");
+    writer = new PrintWriter("Output/MappingResults_PEACH.txt", "UTF-8");
 
     this.sequence_name = sequence_name;
     this.sequence = sequence + "$";
@@ -43,138 +49,186 @@ public class ReadMapping{
   public void begin(){
 
     //Create suffix tree for reference genome
+    long start;
+    long end;
+
+    start = System.nanoTime();
     Node root = createSuffixTree();
+    end = System.nanoTime();
 
+    constructST = (end - start) / 1000000000;
+
+    System.out.println("\n*************** Time Statistics *****************\n");
+    System.out.println("Construct Suffix tree time:\t" + constructST + " seconds");
+
+    start = System.nanoTime();
     DFS_PrepareST(root, A);
+    end = System.nanoTime();
 
+    prepareST = (end - start) / 1000000;
+
+    System.out.println("DFS Prepare ST time:\t\t" + prepareST + " milliseconds");
+
+    start = System.nanoTime();
     mapReads(root);
+    end = System.nanoTime();
+
+    maptime = (end - start) / 1000000000;
+
+    System.out.println("Map read time:\t\t\t" + maptime + " seconds");
+
+    double mean = (double)((Integer)total_alignments).intValue() / (double)((Integer)total_reads).intValue();
+    double sd = 0.0;
+    double hit_ratio = 0.0;
+    double temporary = 0.0;
+
+    hit_ratio = (double)((Integer)total_hits).intValue() / (double)((Integer)total_reads).intValue();
+
+    for(int val : standard_deviation){
+      temporary = temporary + ((val - mean) * (val - mean));
+    }
+
+    sd = Math.sqrt(temporary / total_reads);
 
     writer.close();
-    //file.close();
+
+    System.out.println("\n\n************ Performance Statistics ************\n");
+    System.out.println("Total hits:\t\t\t\t" + total_hits);
+    System.out.println("Total mishits:\t\t\t\t" + no_hits);
+    System.out.println("Hit Ratio:\t\t\t\t" + hit_ratio);
+    System.out.println("Hit Percentage:\t\t\t\t" + hit_ratio * 100.0);
+    System.out.println("Total alignments performed:\t\t" + total_alignments);
+    System.out.println("Average number of alignments:\t\t" + mean);
+    System.out.println("Standard Deviation:\t\t\t" + sd);
+    System.out.println();
 
   }
 
   public void outputResult(String read_name, int start, int end, int flag){
 
     if(flag == 0){
+      total_hits++;
       int ending = start + end;
       writer.println(read_name + " ->\tStarting index: " + start + "\tEnding index: " + ending);
     }
     else{
+      no_hits++;
       writer.println(read_name + " ->\tNo hit found");
     }
   }
 
   public void mapReads(Node root){
     try{
-    ArrayList list;
-    //For all reads
-    for(String key : reads.keySet()){
+      ArrayList list;
+      //For all reads
+      for(String key : reads.keySet()){
 
-      HashMap <Integer, Node> map = new HashMap <Integer, Node> ();
+        total_reads ++;
+        HashMap <Integer, Node> map = new HashMap <Integer, Node> ();
 
-      deepestNode = null;
-      read_ptr = -1;
+        deepestNode = null;
+        read_ptr = -1;
 
-      //Get a single read
-      String read = reads.get(key);
+        //Get a single read
+        String read = reads.get(key);
 
-      int i = 0;
+        int i = 0;
 
-      //This while loop for every suffix of a particular read
-      while(i < read.length() - 25){
+        //This while loop for every suffix of a particular read
+        while(i < read.length() - 25){
 
-        //FindLoc returns a node for current read
-        list = findLoc(read.substring(i), root);
+          //FindLoc returns a node for current read
+          list = findLoc(read.substring(i), root);
 
-        Node temp = (Node) list.get(0);
-        int count = (Integer) list.get(1);
+          Node temp = (Node) list.get(0);
+          int count = (Integer) list.get(1);
 
-        map.put(count, temp);
-        //Increment i for next suffix of current read
-        i++;
-      }
-      //System.out.println(map);
-
-      int val = -1;
-
-      for(int k : map.keySet()){
-        if(k > val){
-          val = k;
+          map.put(count, temp);
+          //Increment i for next suffix of current read
+          i++;
         }
-      }
-      //System.out.println("Val: " + val);
-      deepestNode = map.get(val);
-      //System.out.println("Deepest node depth: " + deepestNode.depth);
-      //If the matches were never greater than 25, deepestNode would be null
-      map = null;
-      if(val >= 25){
+        //System.out.println(map);
 
-        HashMap <Double, Integer> hits = new HashMap <Double, Integer> ();
-        //For all candidate position
-        for(int index = deepestNode.start_leaf; index <= deepestNode.end_leaf; index++){
+        int val = -1;
 
-          double identity = 0.0;
-          double length_coverage = 0.0;
-          int candidate = -1;
-          //System.out.println(A[index]);
+        for(int k : map.keySet()){
+          if(k > val){
+            val = k;
+          }
+        }
+        //System.out.println("Val: " + val);
+        deepestNode = map.get(val);
+        //System.out.println("Deepest node depth: " + deepestNode.depth);
+        //If the matches were never greater than 25, deepestNode would be null
+        map = null;
+        if(val >= 25){
 
-          ArrayList<Integer> values;
-          int i_1 = A[index] - 1;
-          int i_2 = A[index];
+          HashMap <Double, Integer> hits = new HashMap <Double, Integer> ();
+          int num = 0;
+          //For all candidate position
+          for(int index = deepestNode.start_leaf; index <= deepestNode.end_leaf; index++){
+            num ++;
+            double identity = 0.0;
+            double length_coverage = 0.0;
+            int candidate = -1;
+            //System.out.println(A[index]);
 
-          int start = i_1 - read.length();
-          int end = i_2 + read.length();
+            ArrayList<Integer> values;
+            int i_1 = A[index] - 1;
+            int i_2 = A[index];
 
-          if(start < 0)
+            int start = i_1 - read.length();
+            int end = i_2 + read.length();
+
+            if(start < 0)
             start = 0;
 
-          if(end > n - 1)
+            if(end > n - 1)
             end = n - 1;
 
-          values = localAlignment(sequence.substring(start, end), read);
+            values = localAlignment(sequence.substring(start, end), read);
 
-          Double v1 = (double)((Integer)values.get(0)).intValue();
-          Double v2 = (double)((Integer)values.get(1)).intValue();
+            Double v1 = (double)((Integer)values.get(0)).intValue();
+            Double v2 = (double)((Integer)values.get(1)).intValue();
 
-          identity = v1 / v2 * 100;
+            identity = v1 / v2 * 100;
 
-          length_coverage = ((Integer) values.get(1) / read.length()) * 100;
+            length_coverage = ((Integer) values.get(1) / read.length()) * 100;
 
-          //System.out.println("Matches: " + (Integer) values.get(0) + " Aligned Length: " + (Integer) values.get(1) + "Read length: " + read.length());
-          //System.out.println("Identity: " + identity + " Length coverage: " + length_coverage);
-          if(identity >= 90.0 && length_coverage >= 80.0){
+            //System.out.println("Matches: " + (Integer) values.get(0) + " Aligned Length: " + (Integer) values.get(1) + "Read length: " + read.length());
+            //System.out.println("Identity: " + identity + " Length coverage: " + length_coverage);
+            if(identity >= 90.0 && length_coverage >= 80.0){
 
-            hits.put(length_coverage, A[index] - 1);
+              hits.put(length_coverage, A[index] - 1);
 
+            }
+
+          }
+          standard_deviation.add(num);
+          double cover = 0.0;
+
+          for(double d : hits.keySet()){
+            if(d >= cover){
+              cover = d;
+            }
+          }
+          try{
+            outputResult(key, hits.get(cover), read.length() - 1, 0);
+          }
+          catch(Exception e){
+            outputResult(key, 0, 0, 1);
+            continue;
           }
 
         }
-
-        double cover = 0.0;
-
-        for(double d : hits.keySet()){
-          if(d >= cover){
-            cover = d;
-          }
-        }
-        try{
-        //System.out.println("Hit at: " + hits.get(cover));
-        outputResult(key, hits.get(cover), read.length() - 1, 0);}
-        catch(Exception e){
+        else{
+          //No alignment required: Miss
           outputResult(key, 0, 0, 1);
-          continue;
         }
 
-      }
-      else{
-        //No alignment required: Miss
-        //System.out.println("No hit");
-        outputResult(key, 0, 0, 1);
-      }
 
-
-    }}
+      }
+    }
     catch(Exception e){
       e.printStackTrace();
     }
@@ -183,11 +237,11 @@ public class ReadMapping{
 
   public ArrayList <Integer> localAlignment(String reference, String read){
 
+    total_alignments++;
+
     ArrayList <Integer> list = new ArrayList <Integer>();
 
     int align_position = 0;
-
-
     int match_score = 1;
     int mismatch_score = -2;
     int extension_gap_penalty = -1;
@@ -256,7 +310,7 @@ public class ReadMapping{
   public void DFS_PrepareST(Node node, int A[]){
 
     if(node == null)
-      return;
+    return;
 
     if(node.children == null){
 
@@ -535,7 +589,7 @@ public class ReadMapping{
       node_id++;
       //Create v
       v_prime.children.put(string[temp.start], new Node(node_id, v_prime, temp.start, (beta.length() + temp.start - 1),
-                                                null, v_prime.depth + (beta.length() + temp.start - temp.start), null, -1, -1));
+      null, v_prime.depth + (beta.length() + temp.start - temp.start), null, -1, -1));
       //Get node v
       Node v = v_prime.children.get(string[temp.start]);
 
